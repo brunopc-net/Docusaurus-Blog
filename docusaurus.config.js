@@ -246,12 +246,10 @@ const config = {
         {
           title: 'More',
           items: [
-            /*
             {
               label: 'Contact me',
               href: '/contact',
             },
-            */
             {
               label: 'Disclaimer',
               to: '/disclaimer',

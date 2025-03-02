@@ -11,6 +11,9 @@ RUN yarn install
 # Copy the rest of the project
 COPY . .
 
+# Test build
+RUN yarn build
+
 # Expose the default Docusaurus port
 EXPOSE 3000
 
