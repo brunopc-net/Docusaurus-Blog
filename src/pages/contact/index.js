@@ -4,7 +4,6 @@ import Link from '@docusaurus/Link';
 
 import './contact.css'
 
-const openpgp = require('openpgp');
 const pgp_key = `-----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: OpenPGP.js v4.10.8
 Comment: https://openpgpjs.org
@@ -39,26 +38,6 @@ o7Cdtii3o608dwPrDGnTtchulbvMXD8Y5QFe0Dj4abN7
 =mKCF
 -----END PGP PUBLIC KEY BLOCK-----`;
 
-function browserPermitsEncryption (){
-  if (window.crypto.getRandomValues) {
-    return true;
-  }
-  return false;
-}
-
-function encrypt (publicKeyArmored, msg, callback){
-    (async () => {
-      const msgValue = await openpgp.createMessage({ text: msg });
-      const publicKey = await openpgp.readKey({ armoredKey: publicKeyArmored });
-      const encryptedMsg = await openpgp.encrypt({
-        message: msgValue,
-        encryptionKeys: publicKey
-        //signingKeys: privateKey // optional
-      });
-      callback(encryptedMsg)
-  })();
-}
-
 function ContactMePage() {
   
   const actions = {
@@ -75,25 +54,31 @@ function ContactMePage() {
   //Initialy, message is not senable because it's not encrypted yet
   const [submitDisabled, setSubmitDisabled] = useState(true)
 
-  function handleEmailInput(e) {
-    setInputEmail(e.target.value)
-  }
-
-  function handleMessageInput(e) {
-    setInputMessage(e.target.value)
-  }
-
   function handleAction() {
-    if (!browserPermitsEncryption) {
+    if (!window.crypto?.getRandomValues) {
       alert("Sorry, the web browser you're using is not supported");
       return;
     }
     switch (action) {
       case actions.encrypt:
-        encrypt(pgp_key, inputMessage, encrypt_callback);
+        const openpgp = require('openpgp');
+        (async () => {
+          const encryptedMsg = await openpgp.encrypt({
+            message: await openpgp.createMessage({ text: inputMessage }),
+            encryptionKeys: await openpgp.readKey({ armoredKey: pgp_key })
+            //signingKeys: privateKey // optional
+          });
+          setInputMessage(encryptedMsg);
+          setAction(actions.reset);
+          setMsgInputDisabled(true);
+          setSubmitDisabled(false);
+        })();
         break;
       case actions.reset:
-        reset();
+        setInputMessage('')
+        setAction(actions.encrypt);
+        setMsgInputDisabled(false);
+        setSubmitDisabled(true);
         break;
     }
   }
@@ -121,20 +106,6 @@ function ContactMePage() {
     });
   }
 
-  function encrypt_callback (encrypted_msg){
-    setInputMessage(encrypted_msg);
-    setAction(actions.reset);
-    setMsgInputDisabled(true);
-    setSubmitDisabled(false);
-  }
-
-  function reset() {
-    setInputMessage('')
-    setAction(actions.encrypt);
-    setMsgInputDisabled(false);
-    setSubmitDisabled(true);
-  }
-
   return (
     <Layout
       title={'Contact me'}
@@ -152,7 +123,7 @@ function ContactMePage() {
                       type="email"
                       name="email"
                       placeholder="Your email address"
-                      onChange={handleEmailInput}
+                      onChange={(e) => setInputEmail(e.target.value)}
                       required
                   />
                   <textarea
@@ -160,7 +131,7 @@ function ContactMePage() {
                     id="message"
                     name="msg"
                     placeholder='Your message'
-                    onChange={handleMessageInput}
+                    onChange={(e) => setInputMessage(e.target.value)} 
                     value={inputMessage}
                     disabled={msgInputDisabled && "disabled"}
                     required
@@ -174,13 +145,12 @@ function ContactMePage() {
               </form>
             </div>
             <p style={{marginTop: 20}}>
-              You can also contact me at <Link to="mailto:work@brunopc.net">work@brunopc.net</Link>, with or without my public key listed below.
-              <listing style={{marginTop: 30}}>
-                {pgp_key}
-              </listing>
-            </p>
+              You can also contact me a <Link to="mailto:work@brunopc.net">work@brunopc.net</Link>, with or without my public key listed below.
+            </p>  
+            <listing style={{marginTop: 30}}>
+              {pgp_key}
+            </listing>
           </div>
-          
         </div>
       </main>
     </Layout>
